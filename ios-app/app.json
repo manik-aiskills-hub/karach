@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Kharch",
+    "slug": "kharch-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "kharch",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.kharch"
+    },
+    "android": {
+      "package": "com.yourname.kharch"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

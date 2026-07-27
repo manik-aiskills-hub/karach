@@ -1,0 +1,305 @@
+// Prisma schema for Kharch
+// Covers: Accounts, Budgeting, Transactions (with currency + transfers), Loans
+// (with repayment accelerator), Reports, Split (isolated, group/direct), Bills,
+// Goals, Receipts, Notifications.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Supabase / Neon Postgres
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Core user ----------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+
+  // Display preferences (client-side toolbar mirrors these; see AGENTS.md)
+  darkMode      Boolean   @default(false)
+  hideAmounts   Boolean   @default(false)
+  homeCurrency  String    @default("USD") // used only to combine multi-currency totals
+
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  bills         Bill[]
+  goals         Goal[]
+  loans         Loan[]
+  notifications Notification[]
+
+  // Splitwise-style module (kept isolated from personal finance data)
+  splitGroupsOwned   SplitGroup[]       @relation("GroupOwner")
+  splitMemberships   SplitGroupMember[]
+}
+
+// ---------- Accounts (what you have) ----------
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  INVESTMENT
+  CREDIT // liability; balance = amount currently owed
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  name         String
+  institution  String?
+  type         AccountType
+  currency     String        @default("USD") // ISO code: USD, EUR, INR, ...
+  balance      Float         @default(0)      // always in this account's own `currency`
+  location     String?                        // e.g. "Mumbai, India"
+  number       String?                        // account number (masked or full, user's choice)
+  ifsc         String?                        // bank routing code (India); blank elsewhere
+  logPass      String?                        // NEVER store plain text in production — see AGENTS.md
+  tranPass     String?                        // NEVER store plain text in production — see AGENTS.md
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+
+  transactionsFrom Transaction[] @relation("FromAccount")
+  transactionsTo   Transaction[] @relation("ToAccount")
+
+  createdAt    DateTime      @default(now())
+}
+
+// ---------- Personal finance core ----------
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  icon      String?
+  color     String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([userId, name])
+}
+
+enum TransactionDirection {
+  DEBIT  // money out (expense), unless part of a transfer
+  CREDIT // money in (income), unless part of a transfer
+}
+
+model Transaction {
+  id            String               @id @default(cuid())
+  amount        Float                // always in this transaction's own `currency`
+  currency      String               @default("USD")
+  direction     TransactionDirection @default(DEBIT)
+  date          DateTime
+  notes         String?
+  userId        String
+  user          User                 @relation(fields: [userId], references: [id])
+  categoryId    String?
+  category      Category?            @relation(fields: [categoryId], references: [id])
+
+  // If BOTH are set, this is an internal transfer between your own accounts —
+  // excluded from budget/report spend totals (see features/transactions/lib/isExpense.ts)
+  fromAccountId String?
+  fromAccount   Account?             @relation("FromAccount", fields: [fromAccountId], references: [id])
+  toAccountId   String?
+  toAccount     Account?             @relation("ToAccount", fields: [toAccountId], references: [id])
+  isTransfer    Boolean              @default(false)
+
+  receipt       Receipt?
+  createdAt     DateTime             @default(now())
+}
+
+model Receipt {
+  id            String      @id @default(cuid())
+  imageUrl      String
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  createdAt     DateTime    @default(now())
+}
+
+// ---------- Budgeting ----------
+// Limits are tracked in the user's home currency; "spent" is computed by
+// converting each contributing transaction into home currency at read time.
+
+model Budget {
+  id         String   @id @default(cuid())
+  amount     Float               // limit for the period, in home currency
+  month      Int                 // 1-12
+  year       Int
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, month, year])
+}
+
+// ---------- Bills & Subscriptions ----------
+
+model Bill {
+  id             String       @id @default(cuid())
+  name           String
+  amount         Float
+  dueDay         Int                     // day of month, 1-31
+  frequency      BillFrequency @default(MONTHLY)
+  isSubscription Boolean      @default(false)
+  active         Boolean      @default(true)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  createdAt      DateTime     @default(now())
+}
+
+enum BillFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ---------- Goals & Savings ----------
+
+model Goal {
+  id            String    @id @default(cuid())
+  name          String
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  deadline      DateTime?
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+}
+
+// ---------- Loans / Debt (taken & given) + Repayment Accelerator ----------
+
+enum LoanDirection {
+  TAKEN // money you borrowed — you owe this
+  GIVEN // money you lent — someone owes you
+}
+
+model Loan {
+  id            String        @id @default(cuid())
+  direction     LoanDirection
+  counterparty  String                     // bank/lender name if TAKEN, person's name if GIVEN
+  currency      String        @default("USD")
+  principal     Float                      // original amount, in `currency`
+  interestRate  Float         @default(0)  // annual %, 0 for informal interest-free loans
+  minPayment    Float?                     // monthly EMI / minimum, in `currency`
+  startDate     DateTime
+  active        Boolean       @default(true)
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  payments      LoanPayment[]
+  createdAt     DateTime      @default(now())
+}
+
+model LoanPayment {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id])
+  amount    Float
+  date      DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      NotificationType
+  message   String
+  read      Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+enum NotificationType {
+  BUDGET_ALERT
+  UNUSUAL_SPENDING
+  BILL_DUE
+  SPLIT_ACTIVITY
+  LOAN_PAYMENT_DUE
+}
+
+// ---------- Split module (ISOLATED) ----------
+// Deliberately has no foreign keys into Transaction/Budget/Category/Account.
+// Only an aggregate "net owed" figure (converted to home currency) surfaces
+// on the dashboard.
+//
+// Two kinds of split circles:
+//  - GROUP:  starts as you + 1, more people can be added later
+//  - DIRECT: fixed at exactly two people — no one else can ever be added
+
+enum SplitGroupType {
+  GROUP
+  DIRECT
+}
+
+model SplitGroup {
+  id          String             @id @default(cuid())
+  name        String
+  type        SplitGroupType     @default(GROUP)
+  ownerId     String
+  owner       User               @relation("GroupOwner", fields: [ownerId], references: [id])
+  members     SplitGroupMember[]
+  expenses    SplitExpense[]
+  settlements Settlement[]
+  createdAt   DateTime           @default(now())
+}
+
+model SplitGroupMember {
+  id        String     @id @default(cuid())
+  groupId   String
+  group     SplitGroup @relation(fields: [groupId], references: [id])
+  userId    String?              // null if invited by name only, not yet a platform user
+  user      User?      @relation(fields: [userId], references: [id])
+  name      String               // display name (for non-registered members)
+  email     String?
+
+  paidExpenses SplitExpense[] @relation("PaidBy")
+  shares       SplitShare[]
+  settlementsFrom Settlement[] @relation("SettleFrom")
+  settlementsTo   Settlement[] @relation("SettleTo")
+}
+
+model SplitExpense {
+  id          String            @id @default(cuid())
+  groupId     String
+  group       SplitGroup        @relation(fields: [groupId], references: [id])
+  description String
+  amount      Float             // in `currency`
+  currency    String            @default("USD")
+  date        DateTime          @default(now())
+  paidById    String
+  paidBy      SplitGroupMember  @relation("PaidBy", fields: [paidById], references: [id])
+  shares      SplitShare[]
+  createdAt   DateTime          @default(now())
+}
+
+model SplitShare {
+  id             String           @id @default(cuid())
+  splitExpenseId String
+  splitExpense   SplitExpense     @relation(fields: [splitExpenseId], references: [id])
+  memberId       String
+  member         SplitGroupMember @relation(fields: [memberId], references: [id])
+  amountOwed     Float            // in the parent expense's `currency`
+}
+
+model Settlement {
+  id         String           @id @default(cuid())
+  groupId    String
+  group      SplitGroup       @relation(fields: [groupId], references: [id])
+  fromId     String
+  from       SplitGroupMember @relation("SettleFrom", fields: [fromId], references: [id])
+  toId       String
+  to         SplitGroupMember @relation("SettleTo", fields: [toId], references: [id])
+  amount     Float
+  date       DateTime         @default(now())
+}
