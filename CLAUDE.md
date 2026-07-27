@@ -17,6 +17,16 @@ pnpm typecheck:ios            # tsc --noEmit for ios-app
 
 Always use **pnpm**, never npm or yarn, in this repo.
 
+## Git hooks
+
+This repo ships a pre-commit hook (`.githooks/pre-commit`) that strips macOS AppleDouble junk
+(`._*`, `.DS_Store`) before it can be committed. `core.hooksPath` is local git config, not
+something a fresh clone picks up automatically — run this once after cloning:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Working conventions
 
 - Shared, framework-free logic goes in `app-logic/`, not duplicated between `web-app` and
