@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: 16 34 26;        /* near-black deep green, primary text */
+  --color-paper: 245 243 237;   /* warm off-white background */
+  --color-ledger: 228 224 211;  /* card/panel background */
+  --color-line: 207 201 184;    /* hairline / borders */
+  --color-moss: 47 93 80;       /* primary brand green */
+  --color-moss2: 30 64 56;      /* darker green (hover/active) */
+  --color-signal: 201 100 43;   /* burnt orange accent (alerts/negative) */
+  --color-gain: 47 107 79;      /* positive / income green */
+}
+
+/* True black, not a tinted dark green — per product spec. */
+.dark {
+  --color-ink: 255 255 255;
+  --color-paper: 0 0 0;
+  --color-ledger: 20 20 20;
+  --color-line: 51 51 51;
+  --color-moss: 76 211 165;
+  --color-moss2: 124 232 194;
+  --color-signal: 255 148 89;
+  --color-gain: 95 232 168;
+}
+
+html, body {
+  background-color: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+::selection {
+  background-color: rgb(var(--color-moss));
+  color: rgb(var(--color-paper));
+}
+
+.ledger-rule {
+  border-top: 1px solid rgb(var(--color-line));
+}
+
+/* visible keyboard focus, per accessibility floor */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-moss));
+  outline-offset: 2px;
+}

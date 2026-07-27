@@ -1,0 +1,14 @@
+{
+  "name": "@kharch/app-logic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-free business logic shared between web-app and ios-app: currency conversion, the loan repayment simulator, and the expense/transfer rule. No React, no Prisma, no React Native — pure functions only, so both apps import the exact same behavior instead of maintaining two copies.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./currency": "./currency.ts",
+    "./payoff": "./payoff.ts",
+    "./isExpense": "./isExpense.ts"
+  }
+}

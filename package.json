@@ -1,0 +1,11 @@
+{
+  "name": "kharch",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "web": "pnpm --filter @kharch/web-app dev",
+    "ios": "pnpm --filter @kharch/ios-app ios",
+    "typecheck:web": "pnpm --filter @kharch/web-app exec tsc --noEmit",
+    "typecheck:ios": "pnpm --filter @kharch/ios-app exec tsc --noEmit"
+  }
+}

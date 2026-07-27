@@ -1,0 +1,22 @@
+#!/bin/sh
+# Strips macOS AppleDouble (._*) and .DS_Store junk before it gets committed.
+# This repo lives on a filesystem that doesn't store xattrs natively, so macOS
+# spawns ._ sidecar files for almost anything touched by Finder/cp — including
+# inside .git/ itself. This hook keeps that junk out of actual commits.
+
+junk=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)(\._.*|\.DS_Store)$')
+
+if [ -n "$junk" ]; then
+  echo "pre-commit: removing macOS junk files from this commit:"
+  echo "$junk" | sed 's/^/  /'
+  echo "$junk" | while IFS= read -r f; do
+    git reset -q -- "$f"
+    rm -f -- "$f"
+  done
+fi
+
+# Also sweep any AppleDouble files that snuck into git's own internals
+# (.git/objects, .git/refs, .git/logs) so pack/ref reads don't break.
+find "$(git rev-parse --git-dir)" -name "._*" -delete 2>/dev/null
+
+exit 0

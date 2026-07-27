@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+*.tsbuildinfo
+
+# expo / react native
+.expo/
+dist/
+
+# env
+.env
+.env.local
+!.env.example
+
+# logs
+*.log
+
+# macOS
+.DS_Store
+._*
+
+# Claude Code local settings (machine-specific, not shared)
+.claude/settings.local.json
+
+# generic Claude Code skill packages (not expense-app-specific)
+.claude/skills/
+.agents/skills/
+skills-lock.json
