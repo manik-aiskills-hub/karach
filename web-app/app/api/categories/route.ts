@@ -3,6 +3,8 @@ import { getDemoUser } from "@/lib/demoUser";
 import { listCategories, createCategory } from "@/features/budgets/server/categories.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const createSchema = z.object({
   name: z.string().min(1),
   icon: z.string().optional(),

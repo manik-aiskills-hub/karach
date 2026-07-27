@@ -3,6 +3,8 @@ import { getDemoUser } from "@/lib/demoUser";
 import { listBudgetsForMonth, upsertBudget } from "@/features/budgets/server/budgets.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const createSchema = z.object({
   categoryId: z.string(),
   amount: z.number().positive(),

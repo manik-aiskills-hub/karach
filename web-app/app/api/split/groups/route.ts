@@ -3,6 +3,8 @@ import { getDemoUser } from "@/lib/demoUser";
 import { listGroups, createGroup } from "@/features/split/server/split.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const createSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["GROUP", "DIRECT"]),

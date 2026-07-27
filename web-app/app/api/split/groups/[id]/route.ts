@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDemoUser } from "@/lib/demoUser";
 import { getGroup, getGroupBalances } from "@/features/split/server/split.service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const user = await getDemoUser();
   const { searchParams } = new URL(req.url);

@@ -3,6 +3,8 @@ import { getDemoUser } from "@/lib/demoUser";
 import { listLoans, createLoan } from "@/features/loans/server/loans.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const createSchema = z.object({
   direction: z.enum(["TAKEN", "GIVEN"]),
   counterparty: z.string().min(1),

@@ -3,6 +3,8 @@ import { getDemoUser } from "@/lib/demoUser";
 import { listTransactions, createTransaction } from "@/features/transactions/server/transactions.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const createSchema = z.object({
   categoryId: z.string(),
   amount: z.number().positive(),
