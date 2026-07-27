@@ -3,6 +3,8 @@ import { getDemoUser } from "@/lib/demoUser";
 import { listAccounts, createAccount } from "@/features/accounts/server/accounts.service";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const createSchema = z.object({
   name: z.string().min(1),
   institution: z.string().optional(),
